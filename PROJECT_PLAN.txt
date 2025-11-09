@@ -1,0 +1,449 @@
+================================================================================
+                    CONNECT FIRST - PROJECT PLAN
+================================================================================
+
+PROJECT OVERVIEW
+----------------
+A React-based application for managing non-profit needs and donations with role-based
+access for Helpers and U-fund Managers, backed by MariaDB for data persistence.
+
+================================================================================
+                        TODO LIST
+================================================================================
+
+Progress: 1/11 items completed (9%)
+
+[x] Analyze requirements
+[ ] Set up project structure
+[ ] Configure MariaDB database
+[ ] Build backend API
+[ ] Create React frontend
+[ ] Implement authentication
+[ ] Build Manager features
+[ ] Build Helper features
+[ ] Implement priority management (10% feature)
+[ ] Add data persistence
+[ ] Testing and documentation
+
+================================================================================
+                      PROJECT STRUCTURE
+================================================================================
+
+Connect-First/
+├── frontend/                    # React application
+│   ├── public/
+│   │   └── index.html
+│   ├── src/
+│   │   ├── components/         # Reusable components
+│   │   │   ├── Navbar.js
+│   │   │   ├── NeedCard.js
+│   │   │   ├── BasketItem.js
+│   │   │   └── SearchBar.js
+│   │   ├── pages/              # Page components
+│   │   │   ├── Login.js
+│   │   │   ├── HelperDashboard.js
+│   │   │   ├── ManagerDashboard.js
+│   │   │   ├── Basket.js
+│   │   │   └── Checkout.js
+│   │   ├── services/           # API services
+│   │   │   ├── api.js
+│   │   │   ├── authService.js
+│   │   │   └── needService.js
+│   │   ├── context/            # Auth context
+│   │   │   └── AuthContext.js
+│   │   ├── App.js
+│   │   ├── App.css
+│   │   └── index.js
+│   └── package.json
+├── backend/                     # Node.js/Express API
+│   ├── config/
+│   │   └── database.js         # Database configuration
+│   ├── controllers/
+│   │   ├── authController.js
+│   │   ├── needController.js
+│   │   └── basketController.js
+│   ├── models/
+│   │   ├── needModel.js
+│   │   ├── basketModel.js
+│   │   └── userModel.js
+│   ├── routes/
+│   │   ├── authRoutes.js
+│   │   ├── needRoutes.js
+│   │   └── basketRoutes.js
+│   ├── middleware/
+│   │   └── authMiddleware.js
+│   ├── server.js
+│   └── package.json
+├── database/
+│   └── schema.sql              # MariaDB schema
+├── README.md
+└── PROJECT_PLAN.txt
+
+================================================================================
+                      TECHNOLOGY STACK
+================================================================================
+
+FRONTEND
+--------
+- React 18.x
+- React Router DOM (navigation)
+- Axios (HTTP requests)
+- CSS3 (styling)
+
+BACKEND
+-------
+- Node.js
+- Express.js (REST API framework)
+- MySQL2 (MariaDB driver)
+- CORS (Cross-Origin Resource Sharing)
+- Express-session (session management)
+- Body-parser (request parsing)
+
+DATABASE
+--------
+- MariaDB (relational database)
+
+================================================================================
+                      DATABASE SCHEMA
+================================================================================
+
+TABLE: needs
+------------
+id                  INT PRIMARY KEY AUTO_INCREMENT
+name                VARCHAR(255) NOT NULL
+description         TEXT
+cost                DECIMAL(10,2) NOT NULL
+quantity            INT NOT NULL
+category            ENUM('Food', 'Clothing', 'Toiletries', 'Medical', 'Education', 'Other')
+priority            ENUM('High', 'Medium', 'Low') DEFAULT 'Medium'
+is_time_sensitive   BOOLEAN DEFAULT FALSE
+frequency_count     INT DEFAULT 0
+created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+
+TABLE: baskets
+--------------
+id          INT PRIMARY KEY AUTO_INCREMENT
+username    VARCHAR(255) NOT NULL
+need_id     INT NOT NULL
+quantity    INT NOT NULL
+created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+FOREIGN KEY (need_id) REFERENCES needs(id) ON DELETE CASCADE
+
+TABLE: users
+------------
+username    VARCHAR(255) PRIMARY KEY
+role        ENUM('helper', 'manager') NOT NULL
+last_login  TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+TABLE: transactions
+-------------------
+id              INT PRIMARY KEY AUTO_INCREMENT
+username        VARCHAR(255) NOT NULL
+need_id         INT NOT NULL
+quantity        INT NOT NULL
+total_cost      DECIMAL(10,2) NOT NULL
+transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+
+================================================================================
+                      API ENDPOINTS
+================================================================================
+
+AUTHENTICATION
+--------------
+POST   /api/auth/login          # Login (username only)
+POST   /api/auth/logout         # Logout current user
+GET    /api/auth/current        # Get current user info
+
+NEEDS - Manager Only
+--------------------
+POST   /api/needs               # Create new need
+PUT    /api/needs/:id           # Update need
+DELETE /api/needs/:id           # Delete need
+
+NEEDS - Helper Access
+---------------------
+GET    /api/needs               # Get all needs
+GET    /api/needs/:id           # Get specific need
+GET    /api/needs/search        # Search needs (query param: q)
+GET    /api/needs/priority      # Get needs sorted by priority
+GET    /api/needs/category/:cat # Get needs by category
+
+BASKET - Helper Only
+--------------------
+GET    /api/basket              # Get current user's basket
+POST   /api/basket              # Add item to basket
+PUT    /api/basket/:id          # Update basket item quantity
+DELETE /api/basket/:id          # Remove item from basket
+POST   /api/basket/checkout     # Checkout and fund all items
+
+================================================================================
+                      KEY FEATURES
+================================================================================
+
+1. AUTHENTICATION SYSTEM
+   - Simple username-based login
+   - Role determination:
+     * Username "admin" → U-fund Manager
+     * Any other username → Helper
+   - Session-based authentication
+   - No password required (trust-based)
+
+2. HELPER FUNCTIONALITY
+   - View all available needs
+   - Search needs by keyword
+   - Filter by category and priority
+   - Add items to funding basket
+   - Modify basket quantities
+   - Remove items from basket
+   - Checkout to fund selected needs
+   - View transaction history
+
+3. MANAGER FUNCTIONALITY
+   - Create new needs with details
+   - Edit existing needs
+   - Delete needs from cupboard
+   - View all needs in system
+   - CANNOT view helper baskets (privacy)
+   - Set priority levels
+   - Mark time-sensitive items
+   - Assign categories
+
+4. DATA PERSISTENCE
+   - All data stored in MariaDB
+   - Changes reflected immediately for all users
+   - Transaction logging
+   - Data integrity maintained across sessions
+
+================================================================================
+              10% FEATURE: PRIORITY & TIME-SENSITIVE NEEDS
+================================================================================
+
+FEATURE DESCRIPTION
+-------------------
+Advanced needs management system that helps prioritize and organize urgent items
+to ensure critical community needs are addressed promptly.
+
+COMPONENTS
+----------
+1. Priority Levels
+   - High: Critical/urgent needs
+   - Medium: Important but not urgent
+   - Low: Nice to have items
+
+2. Time-Sensitive Flag
+   - Boolean marker for items with deadlines
+   - Visual indicators (badges/icons)
+   - Automatic sorting to top of lists
+
+3. Category Management
+   - Food (perishable items)
+   - Clothing (seasonal)
+   - Toiletries (hygiene essentials)
+   - Medical (urgent supplies)
+   - Education (school supplies)
+   - Other (miscellaneous)
+
+4. Frequency Tracking
+   - Counter for how often an item is requested
+   - Helps identify most-needed items
+   - Used for inventory planning
+
+5. Smart Sorting & Bundling
+   - Sort by priority + time sensitivity
+   - Bundle related items (e.g., "Basic Hygiene Kit")
+   - Quick-add bundles for helpers
+   - Pre-configured need packages
+
+6. Visual Indicators
+   - Color-coded priority badges
+   - Clock icon for time-sensitive items
+   - Frequency bars showing demand
+   - Category icons
+
+WORKFLOW INTEGRATION
+--------------------
+This feature supports the non-profit's workflow by:
+- Ensuring urgent needs are addressed first
+- Helping volunteers identify critical items quickly
+- Enabling efficient bulk donations through bundles
+- Tracking patterns to predict future needs
+- Streamlining the donation process for helpers
+
+JUSTIFICATION
+-------------
+Community support organizations often receive more requests than they can
+immediately fulfill. This priority system ensures that:
+- Critical needs (medical supplies, urgent food) are funded first
+- Seasonal/time-sensitive items (winter coats, school supplies) are addressed promptly
+- High-demand items are identified for bulk procurement
+- Volunteers can make informed decisions about where to focus their support
+
+================================================================================
+                      DEVELOPMENT STEPS
+================================================================================
+
+PHASE 1: Setup & Configuration
+-------------------------------
+1. Initialize project directories
+2. Set up Node.js/Express backend
+3. Set up React frontend with Create React App
+4. Install all dependencies
+5. Configure MariaDB connection
+6. Create database and tables
+
+PHASE 2: Backend Development
+-----------------------------
+1. Implement database models
+2. Create authentication middleware
+3. Build auth routes and controllers
+4. Build needs routes and controllers
+5. Build basket routes and controllers
+6. Add error handling
+7. Test API endpoints
+
+PHASE 3: Frontend Development
+------------------------------
+1. Set up routing with React Router
+2. Create authentication context
+3. Build login page
+4. Create API service layer
+5. Build helper dashboard
+6. Build manager dashboard
+7. Create needs list component
+8. Create basket component
+9. Build checkout flow
+10. Add search functionality
+
+PHASE 4: Priority Feature Implementation
+-----------------------------------------
+1. Add priority fields to database
+2. Update API endpoints for priority
+3. Create priority sorting logic
+4. Build category filter UI
+5. Implement bundle creation (manager)
+6. Add visual priority indicators
+7. Create frequency tracking system
+
+PHASE 5: Testing & Refinement
+------------------------------
+1. Test all user flows
+2. Test CRUD operations
+3. Verify data persistence
+4. Test role-based access
+5. Check basket privacy
+6. Validate priority sorting
+7. Fix bugs and issues
+
+PHASE 6: Documentation
+----------------------
+1. Write comprehensive README
+2. Document API endpoints
+3. Add setup instructions
+4. Include database setup guide
+5. Document 10% feature
+6. Create user guide
+
+================================================================================
+                      INSTALLATION GUIDE
+================================================================================
+
+PREREQUISITES
+-------------
+- Node.js (v16 or higher)
+- MariaDB (v10.6 or higher)
+- npm or yarn package manager
+
+MARIADB SETUP
+-------------
+1. Install MariaDB on your system
+2. Create database:
+   CREATE DATABASE connect_first;
+3. Create user and grant privileges:
+   CREATE USER 'cfuser'@'localhost' IDENTIFIED BY 'password';
+   GRANT ALL PRIVILEGES ON connect_first.* TO 'cfuser'@'localhost';
+   FLUSH PRIVILEGES;
+4. Run schema.sql to create tables
+
+BACKEND SETUP
+-------------
+1. Navigate to backend directory: cd backend
+2. Install dependencies: npm install
+3. Configure database connection in config/database.js
+4. Start server: npm start
+   (Server runs on http://localhost:5000)
+
+FRONTEND SETUP
+--------------
+1. Navigate to frontend directory: cd frontend
+2. Install dependencies: npm install
+3. Start development server: npm start
+   (App runs on http://localhost:3000)
+
+================================================================================
+                      USAGE GUIDE
+================================================================================
+
+LOGGING IN
+----------
+1. Navigate to http://localhost:3000
+2. Enter username
+3. Login as Manager: use "admin"
+4. Login as Helper: use any other username
+
+HELPER WORKFLOW
+---------------
+1. View all needs on dashboard
+2. Use search bar to find specific items
+3. Filter by category or priority
+4. Click "Add to Basket" on desired items
+5. Navigate to basket to review
+6. Adjust quantities if needed
+7. Click "Checkout" to fund items
+8. View confirmation of funded needs
+
+MANAGER WORKFLOW
+----------------
+1. Login as "admin"
+2. View all needs in cupboard
+3. Click "Add Need" to create new item
+4. Fill in details: name, description, cost, quantity, category, priority
+5. Mark as time-sensitive if applicable
+6. Save need
+7. Edit or delete existing needs as needed
+8. Monitor which items are being funded
+
+================================================================================
+                      SECURITY NOTES
+================================================================================
+
+- This is a trust-based system with no password authentication
+- Manager access is restricted to "admin" username only
+- Helpers cannot access manager routes
+- Basket contents are private to each helper
+- Managers cannot view individual baskets
+- All API endpoints validate user roles
+- Session-based authentication prevents unauthorized access
+
+================================================================================
+                      FUTURE ENHANCEMENTS
+================================================================================
+
+- Email notifications for urgent needs
+- Donation history reports
+- Statistical dashboard for managers
+- Mobile responsive design improvements
+- PDF receipt generation for checkouts
+- Volunteer scheduling integration
+- Impact metrics and visualizations
+- Multi-language support
+
+================================================================================
+                      CONTACT & SUPPORT
+================================================================================
+
+For issues, questions, or contributions, please refer to the project README.md
+
+================================================================================
+                    END OF PROJECT PLAN
+================================================================================
