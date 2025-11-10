@@ -16,7 +16,10 @@ const ManagerDashboard = () => {
     category: 'Other',
     priority: 'Medium',
     isTimeSensitive: false,
-    deadline: ''
+    deadline: '',
+    address: '',
+    latitude: '',
+    longitude: ''
   });
 
   useEffect(() => {
@@ -218,6 +221,40 @@ const ManagerDashboard = () => {
               <small className="hint">Set a deadline for this time-sensitive need</small>
             </div>
           )}
+
+          <div className="form-group">
+            <label>Address</label>
+            <input
+              type="text"
+              name="address"
+              value={formData.address}
+              onChange={handleInputChange}
+            />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label>Latitude</label>
+              <input
+                type="number"
+                name="latitude"
+                value={formData.latitude}
+                onChange={handleInputChange}
+                step="any"
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Longitude</label>
+              <input
+                type="number"
+                name="longitude"
+                value={formData.longitude}
+                onChange={handleInputChange}
+                step="any"
+              />
+            </div>
+          </div>
 
           <div className="form-actions">
             <button type="submit" className="btn-primary">

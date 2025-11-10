@@ -153,11 +153,13 @@ const getNeedsByCategory = async (req, res) => {
 
 const createNeed = async (req, res) => {
   try {
-    const { name, description, cost, quantity, category, priority, is_time_sensitive } = req.body;
-    
+    const { name, description, cost, quantity, category, priority, is_time_sensitive, address, latitude, longitude } = req.body;
+
     if (!name || !cost || !quantity) {
       return res.status(400).json({ error: 'Name, cost, and quantity are required' });
     }
+
+    // TODO: Implement geocoding to get latitude and longitude from address if not provided
 
     const need = await Need.create({
       name,
@@ -166,7 +168,10 @@ const createNeed = async (req, res) => {
       quantity,
       category: category || 'Other',
       priority: priority || 'Medium',
-      isTimeSensitive: is_time_sensitive || false
+      isTimeSensitive: is_time_sensitive || false,
+      address: address || '',
+      latitude,
+      longitude
     });
 
     res.status(201).json({
@@ -180,7 +185,10 @@ const createNeed = async (req, res) => {
       is_time_sensitive: need.isTimeSensitive,
       frequency_count: need.frequencyCount,
       created_at: need.createdAt,
-      updated_at: need.updatedAt
+      updated_at: need.updatedAt,
+      address: need.address,
+      latitude: need.latitude,
+      longitude: need.longitude
     });
   } catch (error) {
     console.error('Error creating need:', error);
@@ -191,7 +199,9 @@ const createNeed = async (req, res) => {
 const updateNeed = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, cost, quantity, category, priority, is_time_sensitive } = req.body;
+    const { name, description, cost, quantity, category, priority, is_time_sensitive, address, latitude, longitude } = req.body;
+
+    // TODO: Implement geocoding to get latitude and longitude from address if not provided
 
     const need = await Need.findByIdAndUpdate(
       id,
@@ -202,7 +212,10 @@ const updateNeed = async (req, res) => {
         quantity,
         category,
         priority,
-        isTimeSensitive: is_time_sensitive
+        isTimeSensitive: is_time_sensitive,
+        address,
+        latitude,
+        longitude
       },
       { new: true, runValidators: true }
     );
@@ -222,7 +235,10 @@ const updateNeed = async (req, res) => {
       is_time_sensitive: need.isTimeSensitive,
       frequency_count: need.frequencyCount,
       created_at: need.createdAt,
-      updated_at: need.updatedAt
+      updated_at: need.updatedAt,
+      address: need.address,
+      latitude: need.latitude,
+      longitude: need.longitude
     });
   } catch (error) {
     console.error('Error updating need:', error);

@@ -1,4 +1,5 @@
 import React from 'react';
+import Map from './Map';
 
 const NeedCard = ({ need, onAddToBasket, onEdit, onDelete, isManager }) => {
   const getPriorityClass = (priority) => {
@@ -71,6 +72,7 @@ const NeedCard = ({ need, onAddToBasket, onEdit, onDelete, isManager }) => {
           </button>
         )}
       </div>
+      <Map latitude={need.latitude} longitude={need.longitude} />
     </div>
   );
 };

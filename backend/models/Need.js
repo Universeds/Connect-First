@@ -41,6 +41,16 @@ const needSchema = new mongoose.Schema({
   frequencyCount: {
     type: Number,
     default: 0
+  },
+  address: {
+    type: String,
+    default: ''
+  },
+  latitude: {
+    type: Number
+  },
+  longitude: {
+    type: Number
   }
 }, {
   timestamps: true
