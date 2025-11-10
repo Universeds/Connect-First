@@ -2,32 +2,79 @@ const User = require('../models/User');
 
 const login = async (req, res) => {
   try {
-    const { username } = req.body;
+    const { username, password } = req.body;
     
     if (!username || username.trim() === '') {
       return res.status(400).json({ error: 'Username is required' });
     }
 
-    const role = username === 'admin' ? 'manager' : 'helper';
-    
-    // Find or create user
-    let user = await User.findOne({ username });
-    if (!user) {
-      user = await User.create({ username, role });
-    } else {
-      user.lastLogin = Date.now();
-      await user.save();
+    if (!password || password.trim() === '') {
+      return res.status(400).json({ error: 'Password is required' });
     }
 
-    req.session.user = { username, role };
+    let user = await User.findOne({ username });
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ error: 'Invalid username or password' });
+    }
+
+    user.lastLogin = Date.now();
+    await user.save();
+
+    req.session.user = { username: user.username, role: user.role };
     
     res.json({ 
       message: 'Login successful',
-      user: { username, role }
+      user: { username: user.username, role: user.role }
     });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ error: 'Login failed' });
+  }
+};
+
+const register = async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || username.trim() === '') {
+      return res.status(400).json({ error: 'Username is required' });
+    }
+
+    if (!password || password.trim() === '') {
+      return res.status(400).json({ error: 'Password is required' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    if (username.toLowerCase() === 'admin') {
+      return res.status(400).json({ error: 'Username "admin" is reserved and cannot be registered' });
+    }
+
+    const existingUser = await User.findOne({ username });
+    if (existingUser) {
+      return res.status(400).json({ error: 'Username already exists' });
+    }
+
+    const role = 'helper';
+    
+    const user = await User.create({ username, password, role });
+
+    req.session.user = { username: user.username, role: user.role };
+    
+    res.status(201).json({ 
+      message: 'Registration successful',
+      user: { username: user.username, role: user.role }
+    });
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ error: 'Registration failed' });
   }
 };
 
@@ -48,4 +95,4 @@ const getCurrentUser = (req, res) => {
   }
 };
 
-module.exports = { login, logout, getCurrentUser };
+module.exports = { login, register, logout, getCurrentUser };

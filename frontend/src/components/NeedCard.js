@@ -36,15 +36,26 @@ const NeedCard = ({ need, onAddToBasket, onEdit, onDelete, isManager }) => {
         </div>
       </div>
 
-      {need.is_time_sensitive && (
+      {need.isTimeSensitive && (
         <div className="time-sensitive">
           ⏰ Time Sensitive
+          {need.deadline && (
+            <div style={{ marginTop: '0.25rem', fontWeight: 'bold' }}>
+              Deadline: {new Date(need.deadline).toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {need.frequency_count > 0 && (
+      {need.frequencyCount > 0 && (
         <div className="frequency">
-          Requested {need.frequency_count} times
+          Requested {need.frequencyCount} times
         </div>
       )}
 

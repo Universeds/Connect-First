@@ -15,7 +15,8 @@ const ManagerDashboard = () => {
     quantity: '',
     category: 'Other',
     priority: 'Medium',
-    is_time_sensitive: false
+    isTimeSensitive: false,
+    deadline: ''
   });
 
   useEffect(() => {
@@ -71,7 +72,8 @@ const ManagerDashboard = () => {
       quantity: need.quantity,
       category: need.category,
       priority: need.priority,
-      is_time_sensitive: need.is_time_sensitive
+      isTimeSensitive: need.isTimeSensitive,
+      deadline: need.deadline ? new Date(need.deadline).toISOString().slice(0, 16) : ''
     });
     setShowForm(true);
   };
@@ -98,7 +100,8 @@ const ManagerDashboard = () => {
       quantity: '',
       category: 'Other',
       priority: 'Medium',
-      is_time_sensitive: false
+      isTimeSensitive: false,
+      deadline: ''
     });
     setEditingNeed(null);
     setShowForm(false);
@@ -195,13 +198,26 @@ const ManagerDashboard = () => {
             <label>
               <input
                 type="checkbox"
-                name="is_time_sensitive"
-                checked={formData.is_time_sensitive}
+                name="isTimeSensitive"
+                checked={formData.isTimeSensitive}
                 onChange={handleInputChange}
               />
               Time Sensitive
             </label>
           </div>
+
+          {formData.isTimeSensitive && (
+            <div className="form-group">
+              <label>Deadline</label>
+              <input
+                type="datetime-local"
+                name="deadline"
+                value={formData.deadline}
+                onChange={handleInputChange}
+              />
+              <small className="hint">Set a deadline for this time-sensitive need</small>
+            </div>
+          )}
 
           <div className="form-actions">
             <button type="submit" className="btn-primary">

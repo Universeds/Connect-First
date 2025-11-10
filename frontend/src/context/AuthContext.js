@@ -30,8 +30,8 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (username) => {
-    const response = await api.post('/auth/login', { username });
+  const login = async (username, password) => {
+    const response = await api.post('/auth/login', { username, password });
     setUser(response.data.user);
     return response.data;
   };
