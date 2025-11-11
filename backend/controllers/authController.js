@@ -12,18 +12,17 @@ const login = async (req, res) => {
       return res.status(400).json({ error: 'Password is required' });
     }
 
-    let user = await User.findOne({ username });
+    const user = await User.findByUsername(username);
     if (!user) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    const isPasswordValid = await user.comparePassword(password);
+    const isPasswordValid = await User.comparePassword(password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ error: 'Invalid username or password' });
     }
 
-    user.lastLogin = Date.now();
-    await user.save();
+    await User.updateLastLogin(username);
 
     req.session.user = { username: user.username, role: user.role };
     
@@ -57,7 +56,7 @@ const register = async (req, res) => {
       return res.status(400).json({ error: 'Username "admin" is reserved and cannot be registered' });
     }
 
-    const existingUser = await User.findOne({ username });
+    const existingUser = await User.findByUsername(username);
     if (existingUser) {
       return res.status(400).json({ error: 'Username already exists' });
     }

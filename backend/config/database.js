@@ -1,18 +1,43 @@
-const mongoose = require('mongoose');
+const mysql = require('mysql2/promise');
 
-// MongoDB connection string
-// For local MongoDB: 'mongodb://localhost:27017/connect_first'
-// For MongoDB Atlas: Use your connection string from Atlas
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/connect_first';
+// MariaDB/MySQL connection configuration
+const dbConfig = {
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'cfuser',
+  password: process.env.DB_PASSWORD || 'password',
+  database: process.env.DB_NAME || 'connect_first',
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  enableKeepAlive: true,
+  keepAliveInitialDelay: 0
+};
 
+// Create connection pool
+const pool = mysql.createPool(dbConfig);
+
+// Test connection
 const connectDB = async () => {
   try {
-    await mongoose.connect(MONGODB_URI);
-    console.log('✓ MongoDB Connected Successfully');
+    const connection = await pool.getConnection();
+    console.log('✓ MariaDB Connected Successfully');
+    connection.release();
+    return true;
   } catch (error) {
-    console.error('✗ MongoDB Connection Error:', error.message);
+    console.error('✗ MariaDB Connection Error:', error.message);
     process.exit(1);
   }
 };
 
-module.exports = connectDB;
+// Helper function to execute queries
+const query = async (sql, params) => {
+  try {
+    const [results] = await pool.execute(sql, params);
+    return results;
+  } catch (error) {
+    console.error('Database query error:', error);
+    throw error;
+  }
+};
+
+module.exports = { connectDB, pool, query };

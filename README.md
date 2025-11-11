@@ -44,11 +44,11 @@ This feature implements an advanced needs management system that helps prioritiz
 - Node.js
 - Express.js
 - MySQL2 (MariaDB driver)
-- Express Session
+- Express Session with MySQL store
 - CORS
 
 **Database:**
-- MariaDB
+- MariaDB/MySQL
 
 ## Prerequisites
 

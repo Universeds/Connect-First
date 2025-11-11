@@ -1,19 +1,40 @@
 const Need = require('../models/Need');
 const Transaction = require('../models/Transaction');
 
+// Helper function to format need for API response
+const formatNeed = (need) => {
+  return {
+    id: need.id,
+    name: need.name,
+    description: need.description || '',
+    cost: parseFloat(need.cost),
+    quantity: need.quantity,
+    category: need.category,
+    priority: need.priority,
+    is_time_sensitive: Boolean(need.is_time_sensitive),
+    deadline: need.deadline || null,
+    frequency_count: need.frequency_count || 0,
+    created_at: need.created_at,
+    updated_at: need.updated_at,
+    address: need.address || '',
+    latitude: need.latitude ? parseFloat(need.latitude) : null,
+    longitude: need.longitude ? parseFloat(need.longitude) : null
+  };
+};
+
 // Helper function to calculate funding progress for a need
 const calculateProgress = async (need) => {
   try {
     // Get all transactions for this need
-    const transactions = await Transaction.find({ needId: need._id });
+    const transactions = await Transaction.findByNeedId(need.id);
     
     // Calculate amount raised (sum of all transaction costs)
     const amountRaised = transactions.reduce((sum, transaction) => {
-      return sum + (transaction.totalCost || 0);
+      return sum + parseFloat(transaction.total_cost || 0);
     }, 0);
     
     // Calculate amount left (remaining quantity * cost per unit)
-    const amountLeft = need.quantity * need.cost;
+    const amountLeft = need.quantity * parseFloat(need.cost);
     
     // Calculate total goal (amount raised + amount left)
     const totalGoal = amountRaised + amountLeft;
@@ -22,17 +43,17 @@ const calculateProgress = async (need) => {
     const progressPercentage = totalGoal > 0 ? (amountRaised / totalGoal) * 100 : 0;
     
     return {
-      amountRaised: Math.round(amountRaised * 100) / 100, // Round to 2 decimal places
+      amountRaised: Math.round(amountRaised * 100) / 100,
       amountLeft: Math.round(amountLeft * 100) / 100,
       totalGoal: Math.round(totalGoal * 100) / 100,
-      progressPercentage: Math.round(progressPercentage * 10) / 10 // Round to 1 decimal place
+      progressPercentage: Math.round(progressPercentage * 10) / 10
     };
   } catch (error) {
     console.error('Error calculating progress:', error);
     return {
       amountRaised: 0,
-      amountLeft: need.quantity * need.cost,
-      totalGoal: need.quantity * need.cost,
+      amountLeft: need.quantity * parseFloat(need.cost),
+      totalGoal: need.quantity * parseFloat(need.cost),
       progressPercentage: 0
     };
   }
@@ -40,27 +61,14 @@ const calculateProgress = async (need) => {
 
 const getAllNeeds = async (req, res) => {
   try {
-    const needs = await Need.find()
-      .sort({ priority: -1, isTimeSensitive: -1, createdAt: -1 });
+    const needs = await Need.findAll();
     
     // Calculate progress for each need
     const needsWithProgress = await Promise.all(
       needs.map(async (need) => {
+        const formattedNeed = formatNeed(need);
         const progress = await calculateProgress(need);
-        return {
-          id: need._id,
-          name: need.name,
-          description: need.description,
-          cost: need.cost,
-          quantity: need.quantity,
-          category: need.category,
-          priority: need.priority,
-          is_time_sensitive: need.isTimeSensitive,
-          frequency_count: need.frequencyCount,
-          created_at: need.createdAt,
-          updated_at: need.updatedAt,
-          ...progress
-        };
+        return { ...formattedNeed, ...progress };
       })
     );
     
@@ -78,22 +86,10 @@ const getNeedById = async (req, res) => {
       return res.status(404).json({ error: 'Need not found' });
     }
     
+    const formattedNeed = formatNeed(need);
     const progress = await calculateProgress(need);
     
-    res.json({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt,
-      ...progress
-    });
+    res.json({ ...formattedNeed, ...progress });
   } catch (error) {
     console.error('Error fetching need:', error);
     res.status(500).json({ error: 'Failed to fetch need' });
@@ -107,31 +103,14 @@ const searchNeeds = async (req, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
     
-    const needs = await Need.find({
-      $or: [
-        { name: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
-      ]
-    }).sort({ priority: -1, isTimeSensitive: -1 });
+    const needs = await Need.search(q);
     
     // Calculate progress for each need
     const needsWithProgress = await Promise.all(
       needs.map(async (need) => {
+        const formattedNeed = formatNeed(need);
         const progress = await calculateProgress(need);
-        return {
-          id: need._id,
-          name: need.name,
-          description: need.description,
-          cost: need.cost,
-          quantity: need.quantity,
-          category: need.category,
-          priority: need.priority,
-          is_time_sensitive: need.isTimeSensitive,
-          frequency_count: need.frequencyCount,
-          created_at: need.createdAt,
-          updated_at: need.updatedAt,
-          ...progress
-        };
+        return { ...formattedNeed, ...progress };
       })
     );
     
@@ -144,37 +123,14 @@ const searchNeeds = async (req, res) => {
 
 const getNeedsByPriority = async (req, res) => {
   try {
-    const priorityOrder = { 'High': 3, 'Medium': 2, 'Low': 1 };
-    const needs = await Need.find();
-    
-    const sortedNeeds = needs.sort((a, b) => {
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-      }
-      if (a.isTimeSensitive !== b.isTimeSensitive) {
-        return b.isTimeSensitive ? 1 : -1;
-      }
-      return b.frequencyCount - a.frequencyCount;
-    });
+    const needs = await Need.findAll('priority');
     
     // Calculate progress for each need
     const needsWithProgress = await Promise.all(
-      sortedNeeds.map(async (need) => {
+      needs.map(async (need) => {
+        const formattedNeed = formatNeed(need);
         const progress = await calculateProgress(need);
-        return {
-          id: need._id,
-          name: need.name,
-          description: need.description,
-          cost: need.cost,
-          quantity: need.quantity,
-          category: need.category,
-          priority: need.priority,
-          is_time_sensitive: need.isTimeSensitive,
-          frequency_count: need.frequencyCount,
-          created_at: need.createdAt,
-          updated_at: need.updatedAt,
-          ...progress
-        };
+        return { ...formattedNeed, ...progress };
       })
     );
     
@@ -188,27 +144,14 @@ const getNeedsByPriority = async (req, res) => {
 const getNeedsByCategory = async (req, res) => {
   try {
     const { category } = req.params;
-    const needs = await Need.find({ category })
-      .sort({ priority: -1, isTimeSensitive: -1 });
+    const needs = await Need.findByCategory(category);
     
     // Calculate progress for each need
     const needsWithProgress = await Promise.all(
       needs.map(async (need) => {
+        const formattedNeed = formatNeed(need);
         const progress = await calculateProgress(need);
-        return {
-          id: need._id,
-          name: need.name,
-          description: need.description,
-          cost: need.cost,
-          quantity: need.quantity,
-          category: need.category,
-          priority: need.priority,
-          is_time_sensitive: need.isTimeSensitive,
-          frequency_count: need.frequencyCount,
-          created_at: need.createdAt,
-          updated_at: need.updatedAt,
-          ...progress
-        };
+        return { ...formattedNeed, ...progress };
       })
     );
     
@@ -221,13 +164,11 @@ const getNeedsByCategory = async (req, res) => {
 
 const createNeed = async (req, res) => {
   try {
-    const { name, description, cost, quantity, category, priority, is_time_sensitive, address, latitude, longitude } = req.body;
+    const { name, description, cost, quantity, category, priority, is_time_sensitive, deadline, address, latitude, longitude } = req.body;
 
     if (!name || !cost || !quantity) {
       return res.status(400).json({ error: 'Name, cost, and quantity are required' });
     }
-
-    // TODO: Implement geocoding to get latitude and longitude from address if not provided
 
     const need = await Need.create({
       name,
@@ -237,30 +178,16 @@ const createNeed = async (req, res) => {
       category: category || 'Other',
       priority: priority || 'Medium',
       isTimeSensitive: is_time_sensitive || false,
+      deadline: deadline || null,
       address: address || '',
-      latitude,
-      longitude
+      latitude: latitude || null,
+      longitude: longitude || null
     });
 
+    const formattedNeed = formatNeed(need);
     const progress = await calculateProgress(need);
     
-    res.status(201).json({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt,
-      address: need.address,
-      latitude: need.latitude,
-      longitude: need.longitude,
-      ...progress
-    });
+    res.status(201).json({ ...formattedNeed, ...progress });
   } catch (error) {
     console.error('Error creating need:', error);
     res.status(500).json({ error: 'Failed to create need' });
@@ -270,50 +197,30 @@ const createNeed = async (req, res) => {
 const updateNeed = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, description, cost, quantity, category, priority, is_time_sensitive, address, latitude, longitude } = req.body;
+    const { name, description, cost, quantity, category, priority, is_time_sensitive, deadline, address, latitude, longitude } = req.body;
 
-    // TODO: Implement geocoding to get latitude and longitude from address if not provided
-
-    const need = await Need.findByIdAndUpdate(
-      id,
-      {
-        name,
-        description,
-        cost,
-        quantity,
-        category,
-        priority,
-        isTimeSensitive: is_time_sensitive,
-        address,
-        latitude,
-        longitude
-      },
-      { new: true, runValidators: true }
-    );
+    const need = await Need.update(id, {
+      name,
+      description,
+      cost,
+      quantity,
+      category,
+      priority,
+      isTimeSensitive: is_time_sensitive,
+      deadline,
+      address,
+      latitude,
+      longitude
+    });
 
     if (!need) {
       return res.status(404).json({ error: 'Need not found' });
     }
 
+    const formattedNeed = formatNeed(need);
     const progress = await calculateProgress(need);
 
-    res.json({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt,
-      address: need.address,
-      latitude: need.latitude,
-      longitude: need.longitude,
-      ...progress
-    });
+    res.json({ ...formattedNeed, ...progress });
   } catch (error) {
     console.error('Error updating need:', error);
     res.status(500).json({ error: 'Failed to update need' });
@@ -324,10 +231,12 @@ const deleteNeed = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const need = await Need.findByIdAndDelete(id);
+    const need = await Need.findById(id);
     if (!need) {
       return res.status(404).json({ error: 'Need not found' });
     }
+
+    await Need.delete(id);
 
     res.json({ message: 'Need deleted successfully' });
   } catch (error) {

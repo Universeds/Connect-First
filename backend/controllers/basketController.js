@@ -6,19 +6,19 @@ const getBasket = async (req, res) => {
   try {
     const username = req.session.user.username;
     
-    const basketItems = await Basket.find({ username }).populate('needId');
+    const basketItems = await Basket.findByUsername(username);
     
     const formattedItems = basketItems.map(item => ({
-      id: item._id,
+      id: item.id,
       quantity: item.quantity,
-      created_at: item.createdAt,
-      name: item.needId.name,
-      description: item.needId.description,
-      cost: item.needId.cost,
-      category: item.needId.category,
-      priority: item.needId.priority,
-      is_time_sensitive: item.needId.isTimeSensitive,
-      frequency_count: item.needId.frequencyCount
+      created_at: item.created_at,
+      name: item.name,
+      description: item.description || '',
+      cost: parseFloat(item.cost),
+      category: item.category,
+      priority: item.priority,
+      is_time_sensitive: Boolean(item.is_time_sensitive),
+      frequency_count: item.frequency_count || 0
     }));
     
     res.json(formattedItems);
@@ -47,11 +47,7 @@ const addToBasket = async (req, res) => {
     }
 
     // Update or create basket item
-    await Basket.findOneAndUpdate(
-      { username, needId: need_id },
-      { quantity },
-      { upsert: true, new: true }
-    );
+    await Basket.upsert(username, need_id, quantity);
 
     res.status(201).json({ message: 'Item added to basket' });
   } catch (error) {
@@ -70,17 +66,16 @@ const updateBasketItem = async (req, res) => {
       return res.status(400).json({ error: 'Valid quantity is required' });
     }
 
-    const basketItem = await Basket.findOne({ _id: id, username }).populate('needId');
+    const basketItem = await Basket.findByIdAndUsername(id, username);
     if (!basketItem) {
       return res.status(404).json({ error: 'Basket item not found' });
     }
 
-    if (quantity > basketItem.needId.quantity) {
+    if (quantity > basketItem.need_quantity) {
       return res.status(400).json({ error: 'Requested quantity exceeds available quantity' });
     }
 
-    basketItem.quantity = quantity;
-    await basketItem.save();
+    await Basket.updateQuantity(id, quantity);
 
     res.json({ message: 'Basket item updated' });
   } catch (error) {
@@ -94,11 +89,12 @@ const removeFromBasket = async (req, res) => {
     const username = req.session.user.username;
     const { id } = req.params;
 
-    const result = await Basket.deleteOne({ _id: id, username });
-    
-    if (result.deletedCount === 0) {
+    const basketItem = await Basket.findByIdAndUsername(id, username);
+    if (!basketItem) {
       return res.status(404).json({ error: 'Basket item not found' });
     }
+
+    await Basket.delete(id);
 
     res.json({ message: 'Item removed from basket' });
   } catch (error) {
@@ -111,7 +107,7 @@ const checkout = async (req, res) => {
   try {
     const username = req.session.user.username;
 
-    const basketItems = await Basket.find({ username }).populate('needId');
+    const basketItems = await Basket.findByUsername(username);
 
     if (basketItems.length === 0) {
       return res.status(400).json({ error: 'Basket is empty' });
@@ -119,35 +115,34 @@ const checkout = async (req, res) => {
 
     // Verify quantities are still available
     for (const item of basketItems) {
-      if (item.quantity > item.needId.quantity) {
+      const need = await Need.findById(item.need_id);
+      if (!need) {
+        return res.status(400).json({ error: `Need not found for item ${item.name}` });
+      }
+      if (item.quantity > need.quantity) {
         return res.status(400).json({ 
-          error: `Insufficient quantity for ${item.needId.name}` 
+          error: `Insufficient quantity for ${item.name}` 
         });
       }
     }
 
     // Process each item
     for (const item of basketItems) {
-      // Update need quantity and frequency
-      await Need.findByIdAndUpdate(item.needId._id, {
-        $inc: { 
-          quantity: -item.quantity,
-          frequencyCount: 1
-        }
-      });
+      // Update need quantity and frequency (decrease quantity, increase frequency)
+      await Need.updateQuantityAndFrequency(item.need_id, -item.quantity, 1);
 
       // Create transaction record
-      const totalCost = item.needId.cost * item.quantity;
+      const totalCost = parseFloat(item.cost) * item.quantity;
       await Transaction.create({
         username,
-        needId: item.needId._id,
+        needId: item.need_id,
         quantity: item.quantity,
         totalCost
       });
     }
 
     // Clear basket
-    await Basket.deleteMany({ username });
+    await Basket.deleteAllByUsername(username);
 
     res.json({ message: 'Checkout successful', itemsFunded: basketItems.length });
   } catch (error) {

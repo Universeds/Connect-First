@@ -1,44 +1,43 @@
-const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
+const { query } = require('../config/database');
 
-const userSchema = new mongoose.Schema({
-  username: {
-    type: String,
-    required: true,
-    unique: true,
-    trim: true
+// User model functions
+const User = {
+  // Find user by username
+  async findByUsername(username) {
+    const sql = 'SELECT * FROM users WHERE username = ?';
+    const results = await query(sql, [username]);
+    return results[0] || null;
   },
-  password: {
-    type: String,
-    required: true
-  },
-  role: {
-    type: String,
-    enum: ['helper', 'manager'],
-    required: true
-  },
-  lastLogin: {
-    type: Date,
-    default: Date.now
-  }
-}, {
-  timestamps: true
-});
 
-userSchema.pre('save', async function(next) {
-  if (!this.isModified('password')) return next();
-  
-  try {
+  // Create new user
+  async create(userData) {
+    const { username, password, role } = userData;
+    
+    // Hash password
     const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (error) {
-    next(error);
-  }
-});
+    const hashedPassword = await bcrypt.hash(password, salt);
+    
+    const sql = 'INSERT INTO users (username, password, role) VALUES (?, ?, ?)';
+    const result = await query(sql, [username, hashedPassword, role]);
+    
+    return {
+      username,
+      role,
+      lastLogin: new Date()
+    };
+  },
 
-userSchema.methods.comparePassword = async function(candidatePassword) {
-  return await bcrypt.compare(candidatePassword, this.password);
+  // Update last login
+  async updateLastLogin(username) {
+    const sql = 'UPDATE users SET last_login = NOW() WHERE username = ?';
+    await query(sql, [username]);
+  },
+
+  // Compare password
+  async comparePassword(plainPassword, hashedPassword) {
+    return await bcrypt.compare(plainPassword, hashedPassword);
+  }
 };
 
-module.exports = mongoose.model('User', userSchema);
+module.exports = User;

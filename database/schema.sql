@@ -1,8 +1,11 @@
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(255) PRIMARY KEY,
+    password VARCHAR(255) NOT NULL,
     role ENUM('helper', 'manager') NOT NULL,
-    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
 
 -- Needs table
@@ -15,7 +18,11 @@ CREATE TABLE IF NOT EXISTS needs (
     category ENUM('Food', 'Clothing', 'Toiletries', 'Medical', 'Education', 'Other') DEFAULT 'Other',
     priority ENUM('High', 'Medium', 'Low') DEFAULT 'Medium',
     is_time_sensitive BOOLEAN DEFAULT FALSE,
+    deadline DATETIME NULL DEFAULT NULL,
     frequency_count INT DEFAULT 0,
+    address VARCHAR(500) DEFAULT '',
+    latitude DECIMAL(10, 8) DEFAULT NULL,
+    longitude DECIMAL(11, 8) DEFAULT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 );
@@ -41,9 +48,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     transaction_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Insert sample admin user
-INSERT INTO users (username, role) VALUES ('admin', 'manager')
-ON DUPLICATE KEY UPDATE role='manager';
+-- Note: Users are seeded via backend/seedUsers.js script
+-- Run: npm run seed (in backend directory) to create default users
 
 -- Insert sample needs for testing
 INSERT INTO needs (name, description, cost, quantity, category, priority, is_time_sensitive) VALUES

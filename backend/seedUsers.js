@@ -1,15 +1,15 @@
-const mongoose = require('mongoose');
 const User = require('./models/User');
+const { connectDB } = require('./config/database');
 require('dotenv').config();
 
 const seedUsers = async () => {
   try {
-    // Connect to MongoDB
-    await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/connect_first');
-    console.log('Connected to MongoDB');
+    // Connect to MariaDB
+    await connectDB();
+    console.log('Connected to MariaDB');
 
     // Check if admin already exists
-    const existingAdmin = await User.findOne({ username: 'admin' });
+    const existingAdmin = await User.findByUsername('admin');
     if (!existingAdmin) {
       await User.create({
         username: 'admin',
@@ -22,7 +22,7 @@ const seedUsers = async () => {
     }
 
     // Check if helper already exists
-    const existingHelper = await User.findOne({ username: 'helper' });
+    const existingHelper = await User.findByUsername('helper');
     if (!existingHelper) {
       await User.create({
         username: 'helper',
