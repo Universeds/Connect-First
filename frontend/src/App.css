@@ -442,6 +442,81 @@ body {
     margin-bottom: 0.5rem;
 }
 
+/* Funding Progress Bar */
+.funding-progress {
+    background: #1e1e2d;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid #3b3e57;
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.progress-label {
+    color: #9a9fb9;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.progress-percentage {
+    color: #70c1b3;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.progress-bar-container {
+    width: 100%;
+    height: 12px;
+    background-color: #3b3e57;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 0.75rem;
+    position: relative;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #70c1b3 0%, #85d0c3 100%);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+    box-shadow: 0 2px 4px rgba(112, 193, 179, 0.3);
+}
+
+.progress-details {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.progress-amount {
+    color: #e2e8f0;
+}
+
+.progress-amount strong {
+    color: #70c1b3;
+    font-weight: 600;
+}
+
+.progress-total {
+    text-align: center;
+    color: #9a9fb9;
+    font-size: 0.8rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #3b3e57;
+}
+
+.progress-total strong {
+    color: #e2e8f0;
+    font-weight: 600;
+}
+
 .need-actions {
     display: flex;
     gap: 0.5rem;

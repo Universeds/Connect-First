@@ -1,26 +1,70 @@
 const Need = require('../models/Need');
+const Transaction = require('../models/Transaction');
+
+// Helper function to calculate funding progress for a need
+const calculateProgress = async (need) => {
+  try {
+    // Get all transactions for this need
+    const transactions = await Transaction.find({ needId: need._id });
+    
+    // Calculate amount raised (sum of all transaction costs)
+    const amountRaised = transactions.reduce((sum, transaction) => {
+      return sum + (transaction.totalCost || 0);
+    }, 0);
+    
+    // Calculate amount left (remaining quantity * cost per unit)
+    const amountLeft = need.quantity * need.cost;
+    
+    // Calculate total goal (amount raised + amount left)
+    const totalGoal = amountRaised + amountLeft;
+    
+    // Calculate progress percentage
+    const progressPercentage = totalGoal > 0 ? (amountRaised / totalGoal) * 100 : 0;
+    
+    return {
+      amountRaised: Math.round(amountRaised * 100) / 100, // Round to 2 decimal places
+      amountLeft: Math.round(amountLeft * 100) / 100,
+      totalGoal: Math.round(totalGoal * 100) / 100,
+      progressPercentage: Math.round(progressPercentage * 10) / 10 // Round to 1 decimal place
+    };
+  } catch (error) {
+    console.error('Error calculating progress:', error);
+    return {
+      amountRaised: 0,
+      amountLeft: need.quantity * need.cost,
+      totalGoal: need.quantity * need.cost,
+      progressPercentage: 0
+    };
+  }
+};
 
 const getAllNeeds = async (req, res) => {
   try {
     const needs = await Need.find()
       .sort({ priority: -1, isTimeSensitive: -1, createdAt: -1 });
     
-    // Convert to match frontend expectations
-    const needsWithSnakeCase = needs.map(need => ({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt
-    }));
+    // Calculate progress for each need
+    const needsWithProgress = await Promise.all(
+      needs.map(async (need) => {
+        const progress = await calculateProgress(need);
+        return {
+          id: need._id,
+          name: need.name,
+          description: need.description,
+          cost: need.cost,
+          quantity: need.quantity,
+          category: need.category,
+          priority: need.priority,
+          is_time_sensitive: need.isTimeSensitive,
+          frequency_count: need.frequencyCount,
+          created_at: need.createdAt,
+          updated_at: need.updatedAt,
+          ...progress
+        };
+      })
+    );
     
-    res.json(needsWithSnakeCase);
+    res.json(needsWithProgress);
   } catch (error) {
     console.error('Error fetching needs:', error);
     res.status(500).json({ error: 'Failed to fetch needs' });
@@ -34,6 +78,8 @@ const getNeedById = async (req, res) => {
       return res.status(404).json({ error: 'Need not found' });
     }
     
+    const progress = await calculateProgress(need);
+    
     res.json({
       id: need._id,
       name: need.name,
@@ -45,7 +91,8 @@ const getNeedById = async (req, res) => {
       is_time_sensitive: need.isTimeSensitive,
       frequency_count: need.frequencyCount,
       created_at: need.createdAt,
-      updated_at: need.updatedAt
+      updated_at: need.updatedAt,
+      ...progress
     });
   } catch (error) {
     console.error('Error fetching need:', error);
@@ -67,21 +114,28 @@ const searchNeeds = async (req, res) => {
       ]
     }).sort({ priority: -1, isTimeSensitive: -1 });
     
-    const needsWithSnakeCase = needs.map(need => ({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt
-    }));
+    // Calculate progress for each need
+    const needsWithProgress = await Promise.all(
+      needs.map(async (need) => {
+        const progress = await calculateProgress(need);
+        return {
+          id: need._id,
+          name: need.name,
+          description: need.description,
+          cost: need.cost,
+          quantity: need.quantity,
+          category: need.category,
+          priority: need.priority,
+          is_time_sensitive: need.isTimeSensitive,
+          frequency_count: need.frequencyCount,
+          created_at: need.createdAt,
+          updated_at: need.updatedAt,
+          ...progress
+        };
+      })
+    );
     
-    res.json(needsWithSnakeCase);
+    res.json(needsWithProgress);
   } catch (error) {
     console.error('Error searching needs:', error);
     res.status(500).json({ error: 'Failed to search needs' });
@@ -103,21 +157,28 @@ const getNeedsByPriority = async (req, res) => {
       return b.frequencyCount - a.frequencyCount;
     });
     
-    const needsWithSnakeCase = sortedNeeds.map(need => ({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt
-    }));
+    // Calculate progress for each need
+    const needsWithProgress = await Promise.all(
+      sortedNeeds.map(async (need) => {
+        const progress = await calculateProgress(need);
+        return {
+          id: need._id,
+          name: need.name,
+          description: need.description,
+          cost: need.cost,
+          quantity: need.quantity,
+          category: need.category,
+          priority: need.priority,
+          is_time_sensitive: need.isTimeSensitive,
+          frequency_count: need.frequencyCount,
+          created_at: need.createdAt,
+          updated_at: need.updatedAt,
+          ...progress
+        };
+      })
+    );
     
-    res.json(needsWithSnakeCase);
+    res.json(needsWithProgress);
   } catch (error) {
     console.error('Error fetching needs by priority:', error);
     res.status(500).json({ error: 'Failed to fetch needs' });
@@ -130,21 +191,28 @@ const getNeedsByCategory = async (req, res) => {
     const needs = await Need.find({ category })
       .sort({ priority: -1, isTimeSensitive: -1 });
     
-    const needsWithSnakeCase = needs.map(need => ({
-      id: need._id,
-      name: need.name,
-      description: need.description,
-      cost: need.cost,
-      quantity: need.quantity,
-      category: need.category,
-      priority: need.priority,
-      is_time_sensitive: need.isTimeSensitive,
-      frequency_count: need.frequencyCount,
-      created_at: need.createdAt,
-      updated_at: need.updatedAt
-    }));
+    // Calculate progress for each need
+    const needsWithProgress = await Promise.all(
+      needs.map(async (need) => {
+        const progress = await calculateProgress(need);
+        return {
+          id: need._id,
+          name: need.name,
+          description: need.description,
+          cost: need.cost,
+          quantity: need.quantity,
+          category: need.category,
+          priority: need.priority,
+          is_time_sensitive: need.isTimeSensitive,
+          frequency_count: need.frequencyCount,
+          created_at: need.createdAt,
+          updated_at: need.updatedAt,
+          ...progress
+        };
+      })
+    );
     
-    res.json(needsWithSnakeCase);
+    res.json(needsWithProgress);
   } catch (error) {
     console.error('Error fetching needs by category:', error);
     res.status(500).json({ error: 'Failed to fetch needs' });
@@ -174,6 +242,8 @@ const createNeed = async (req, res) => {
       longitude
     });
 
+    const progress = await calculateProgress(need);
+    
     res.status(201).json({
       id: need._id,
       name: need.name,
@@ -188,7 +258,8 @@ const createNeed = async (req, res) => {
       updated_at: need.updatedAt,
       address: need.address,
       latitude: need.latitude,
-      longitude: need.longitude
+      longitude: need.longitude,
+      ...progress
     });
   } catch (error) {
     console.error('Error creating need:', error);
@@ -224,6 +295,8 @@ const updateNeed = async (req, res) => {
       return res.status(404).json({ error: 'Need not found' });
     }
 
+    const progress = await calculateProgress(need);
+
     res.json({
       id: need._id,
       name: need.name,
@@ -238,7 +311,8 @@ const updateNeed = async (req, res) => {
       updated_at: need.updatedAt,
       address: need.address,
       latitude: need.latitude,
-      longitude: need.longitude
+      longitude: need.longitude,
+      ...progress
     });
   } catch (error) {
     console.error('Error updating need:', error);
